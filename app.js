@@ -65,10 +65,8 @@ async function linkTosonarCloud(
     `https://sonarcloud.io/api/autoscan/eligibility?autoEnable=true&projectKey=${projectCreateReponse.data.projects[0].projectKey}`
   );
   console.log(triggerAutoScan.data);
-  const metrics = await axios.get(
-    `https://sonarcloud.io/api/measures/component_tree?component=${projectCreateReponse.data.projects[0].projectKey}&branch=${branch}&metricKeys=complexity,violations,bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
-  );
-  return metrics;
+  
+  return projectCreateReponse;
 }
 
 async function pushBuildFile(path, gitHubOrganisation, repo, commitMessage) {
@@ -91,7 +89,7 @@ async function pushBuildFile(path, gitHubOrganisation, repo, commitMessage) {
   return response;
 }
 
-async function analyseProject(
+async function createSonarCloudProjectAndLinkToGitHub(
   sonarAuthToken,
   gitHubOrganisation,
   gitHubRepo,
@@ -117,7 +115,7 @@ async function analyseProject(
   const { data } = await axios.get(
     `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}`
   );
-  const metrics = await linkTosonarCloud(
+  const respData = await linkTosonarCloud(
     sonarAuthToken,
     gitHubOrganisation,
     gitHubRepo,
@@ -125,10 +123,19 @@ async function analyseProject(
     data.id,
     branch
   );
-  return metrics;
+    
+  return respData;
 }
 
-analyseProject(
+
+async function fetchMetrics(projectKey){
+ const metrics = await axios.get(
+    `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=complexity,violations,bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
+  );
+  return metrics
+}
+
+createSonarCloudProjectAndLinkToGitHub(
   "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
   "Nikshay19",
   "Customer-Log",
@@ -137,6 +144,7 @@ analyseProject(
 )
   .then((res) => {
     console.log(res.data);
+    fetchMetrics(res.data.projects[0].projectKey)
   })
   .catch((err) => {
     console.log(err.response.data);
