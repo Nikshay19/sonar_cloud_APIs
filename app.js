@@ -2,6 +2,14 @@ const axios = require("axios").default;
 const fs = require("fs");
 const sodium = require("tweetsodium");
 
+/**
+  The following is the nomenclature used in this file
+  Nikshay19 -> Name of the the github organisation name (get it from config)
+  Calculator -> Name of the repo -> This is the team_id
+  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  -> This is the admin's authToken -> get it from config
+
+**/
+
 async function uploadTokenToRepoSecrets(arr) {
   for (const el of arr) {
     const { data: encKeyObject } = await axios.get(
