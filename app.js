@@ -144,6 +144,7 @@ createSonarCloudProjectAndLinkToGitHub(
 )
   .then((res) => {
     console.log(res.data);
+    //Use only if needed  
     fetchMetrics(res.data.projects[0].projectKey)
   })
   .catch((err) => {
