@@ -128,7 +128,7 @@ async function createSonarCloudProjectAndLinkToGitHub(
 }
 
 
-async function fetchMetrics(projectKey){
+async function fetchMetricsFromSonarCloud(projectKey){
  const metrics = await axios.get(
     `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=complexity,violations,bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
   );
@@ -145,7 +145,7 @@ createSonarCloudProjectAndLinkToGitHub(
   .then((res) => {
     console.log(res.data);
     //Use only if needed  
-    fetchMetrics(res.data.projects[0].projectKey)
+    fetchMetricsFromSonarCloud(res.data.projects[0].projectKey)
   })
   .catch((err) => {
     console.log(err.response.data);
