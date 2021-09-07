@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -21,4 +21,4 @@ jobs:
         env:
           GITHUB_TOKEN: 1234rthjrthtr556  # This is some junk value  - this is needed so  dont ignore it
           SONAR_TOKEN: f11d0b115fbdb7796f15a31aebe616f81654cb5e #Add it to keys.json and get it from there
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Nikshay19_Customer-Log -Dsonar.login=f11d0b115fbdb7796f15a31aebe616f81654cb5e
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Nikshay19_Calculator -Dsonar.login=f11d0b115fbdb7796f15a31aebe616f81654cb5e
