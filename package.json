@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "axios": "^0.21.1",
+    "dotenv": "^10.0.0",
     "live-server": "^1.2.1",
     "tweetsodium": "^0.0.5"
   }

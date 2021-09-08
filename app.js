@@ -15,7 +15,6 @@ const sodium = require("tweetsodium");
 // repo secrets needed for sonarcloud and github authorization are created
 async function uploadTokenToRepoSecrets(arr, gitHubOrganisation, gitHubRepo) {
   for (const el of arr) {
-    
     //Obtain the key from repo to generate a encrypted secret
     const { data: encKeyObject } = await axios.get(
       `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/actions/secrets/public-key`,
@@ -152,32 +151,6 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
   return metrics;
 }
 
-createSonarCloudProjectAndLinkToGitHub(
-  "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
-  "Nikshay19",
-  "Calculator",
-  "nikshay19",
-  "master",
-  "java"
-)
-  .then((res) => {
-    console.log(res.data ? res.data : res);
-    if (res.data && res.data.projects[0] && res.data.projects[0].projectKey) {
-      return fetchMetricsFromSonarCloud(
-        res.data.projects[0].projectKey,
-        "master"
-      );
-    }
-
-    return "unable to fetch metrics";
-  })
-  .then((res) => {
-    console.log(res.data ? res.data : res);
-  })
-  .catch((err) => {
-    console.log(err.response ? err.response.data : err);
-  });
-
 function encryptTokenForRepoSecret(key, value) {
   const messageBytes = Buffer.from(value);
   const keyBytes = Buffer.from(key, "base64");
@@ -188,3 +161,70 @@ function encryptTokenForRepoSecret(key, value) {
 
   return encrypted;
 }
+
+async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
+  const githubMetrics = await axios.get(
+    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/stats/contributors`
+  );
+  let totalCommit = 0;
+  let deletedLines = 0;
+  let addedLines = 0;
+  for (const el of githubMetrics.data) {
+    if (el.weeks && el.weeks.length > 0) {
+      for (const week of el.weeks) {
+        deletedLines += week.d;
+        addedLines += week.a;
+      }
+    }
+    totalCommit += el.total;
+  }
+  return {
+    totalCommit,
+    deletedLines,
+    addedLines
+  }
+}
+
+async function initiateSonarcloudGithubIntegration() {
+  const obj = {};
+  const { data: sonarCloudResponse } =
+    await createSonarCloudProjectAndLinkToGitHub(
+      "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
+      "Nikshay19",
+      "Calculator",
+      "nikshay19",
+      "master",
+      "java"
+    );
+  if (
+    sonarCloudResponse &&
+    sonarCloudResponse.projects[0] &&
+    sonarCloudResponse.projects[0].projectKey
+  ) {
+    const sonarcloudMetrics = await fetchMetricsFromSonarCloud(
+      sonarCloudResponse.projects[0].projectKey,
+      "master"
+    );
+    obj.sonarcloudMetrics = sonarcloudMetrics.data;
+  }
+
+  const githubMetrics = await getGithubMetrics(
+    "Nikshay19",
+    "quiz-node-version"
+  );
+
+  obj.githubMetrics = githubMetrics
+
+  const languagesUsed = await axios.get("https://api.github.com/repos/Nikshay19/Calculator/languages")
+
+  obj.languagesUsed = languagesUsed.data
+  return obj;
+}
+
+initiateSonarcloudGithubIntegration()
+  .then((res) => {
+    console.log(res);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
