@@ -47,6 +47,7 @@ async function uploadTokenToRepoSecrets(arr, gitHubOrganisation, gitHubRepo) {
   return "upload success";
 }
 
+//
 //Create a project in sonarcloud from github repo, by integrating the github repo to sonarcloud
 async function linkTosonarCloud(
   sonarToken,
