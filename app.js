@@ -163,26 +163,58 @@ function encryptTokenForRepoSecret(key, value) {
 }
 
 async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
+  const githubMetricsMap = new Map();
+  const githubMetricsResponeArray = [];
+  let githubMetricsResponeObj = {};
   const githubMetrics = await axios.get(
     `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/stats/contributors`
   );
-  let totalCommit = 0;
-  let deletedLines = 0;
-  let addedLines = 0;
-  for (const el of githubMetrics.data) {
-    if (el.weeks && el.weeks.length > 0) {
-      for (const week of el.weeks) {
-        deletedLines += week.d;
-        addedLines += week.a;
+  if (githubMetrics.data) {
+    for (const el of githubMetrics.data) {
+      let totalCommit = 0;
+      let deletedLines = 0;
+      let addedLines = 0;
+      if (el.weeks && el.weeks.length > 0) {
+        for (const week of el.weeks) {
+          deletedLines += week.d;
+          addedLines += week.a;
+        }
+      }
+      totalCommit += el.total;
+      if (githubMetricsMap.has(el.author.login)) {
+        githubMetricsMap.set(
+          `${el.author.login}_deletedLines`,
+          githubMetricsMap.get(`${el.author.login}_deletedLines`) + deletedLines
+        );
+        githubMetricsMap.set(
+          `${el.author.login}_addedLines`,
+          githubMetricsMap.get(`${el.author.login}_addedLines`) + addedLines
+        );
+        githubMetricsMap.set(
+          `${el.author.login}_totalCommit`,
+          githubMetricsMap.get(`${el.author.login}_totalCommit`) + totalCommit
+        );
+      } else {
+        githubMetricsMap.set(el.author.login, "author");
+        githubMetricsMap.set(`${el.author.login}_deletedLines`, deletedLines);
+        githubMetricsMap.set(`${el.author.login}_addedLines`, addedLines);
+        githubMetricsMap.set(`${el.author.login}_totalCommit`, totalCommit);
       }
     }
-    totalCommit += el.total;
+    const gitHubMetricsIterator = githubMetricsMap[Symbol.iterator]();
+    for (const el of gitHubMetricsIterator) {
+      if (el[1] === "author") {
+        githubMetricsResponeObj.authorName = el[0];
+      } else {
+        githubMetricsResponeObj[el[0].split("_")[1]] = el[1];
+      }
+      if (Object.keys(githubMetricsResponeObj).length === 4) {
+        githubMetricsResponeArray.push(githubMetricsResponeObj);
+        githubMetricsResponeObj = {};
+      }
+    }
   }
-  return {
-    totalCommit,
-    deletedLines,
-    addedLines
-  }
+  return githubMetricsResponeArray;
 }
 
 async function initiateSonarcloudGithubIntegration() {
@@ -208,16 +240,17 @@ async function initiateSonarcloudGithubIntegration() {
     obj.sonarcloudMetrics = sonarcloudMetrics.data;
   }
 
-  const githubMetrics = await getGithubMetrics(
-    "Nikshay19",
-    "quiz-node-version"
+  console.log(">>>>>>> fetching github metrics <<<<<<<<<<");
+
+  const githubMetrics = await getGithubMetrics("Nikshay19", "Calculator");
+
+  obj.githubMetrics = githubMetrics;
+
+  const languagesUsed = await axios.get(
+    "https://api.github.com/repos/Nikshay19/Calculator/languages"
   );
 
-  obj.githubMetrics = githubMetrics
-
-  const languagesUsed = await axios.get("https://api.github.com/repos/Nikshay19/Calculator/languages")
-
-  obj.languagesUsed = languagesUsed.data
+  obj.languagesUsed = languagesUsed.data;
   return obj;
 }
 
