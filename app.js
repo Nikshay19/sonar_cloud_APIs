@@ -146,9 +146,9 @@ async function createSonarCloudProjectAndLinkToGitHub(
 //fetch project metrics once build and analyses is complete
 async function fetchMetricsFromSonarCloud(projectKey, branch) {
   const sonarCloudMetricMap = new Map();
-  const { data: response_severity_tags } = await axios.get(
-    `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500`
-  );
+  let sonarCloudMetricsObj = {};
+  let recursive = true;
+  let pageNumber = 1;
   const { data: response_metric_measures } = await axios.get(
     `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
   );
@@ -167,29 +167,36 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
     }
   }
 
-  let sonarCloudMetricsObj = {};
-  if (
-    response_severity_tags.issues &&
-    Array.isArray(response_severity_tags.issues) &&
-    response_severity_tags.issues.length > 0
-  ) {
-    let count = 0;
-    for (const el of response_severity_tags.issues) {
-      sonarCloudMetricMap.has(el.severity)
-        ? sonarCloudMetricMap.set(
-            el.severity,
-            sonarCloudMetricMap.get(el.severity) + 1
-          )
-        : sonarCloudMetricMap.set(el.severity, count++);
-      count = 0;
+  while (recursive) {
+    const { data: response_severity_tags } = await axios.get(
+      `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500&types=CODE_SMELL,BUG,VULNERABILITY&p=${pageNumber}`
+    );
+    if (
+      response_severity_tags.issues &&
+      Array.isArray(response_severity_tags.issues) &&
+      response_severity_tags.issues.length > 0
+    ) {
+      for (const el of response_severity_tags.issues) {
+      let count = 0;
+        sonarCloudMetricMap.has(el.severity)
+          ? sonarCloudMetricMap.set(
+              el.severity,
+              sonarCloudMetricMap.get(el.severity) + 1
+            )
+          : sonarCloudMetricMap.set(el.severity, ++count);
+      }
+      const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
+  
+      for (const el of sonarCloudMetricsIterator) {
+        sonarCloudMetricsObj[el[0]] = el[1];
+      }
+    }    
+    else {
+      recursive = false;
     }
-    const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
-
-    for (const el of sonarCloudMetricsIterator) {
-      sonarCloudMetricsObj[el[0]] = el[1];
-    }
-    console.log(sonarCloudMetricsObj);
+    ++pageNumber;
   }
+  console.log(sonarCloudMetricsObj);
   return sonarCloudMetricsObj;
 }
 
