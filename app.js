@@ -168,6 +168,10 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
   }
 
   while (recursive) {
+
+    //timeout for 1s, in case sonar cloud rate limits the request
+    console.log(">>> waiting for a second <<<");
+    await timeout();
     const { data: response_severity_tags } = await axios.get(
       `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500&types=CODE_SMELL,BUG,VULNERABILITY&p=${pageNumber}`
     );
@@ -308,9 +312,9 @@ async function initiateSonarcloudGithubIntegration(sonarAuthToken,gitHubOrganisa
 initiateSonarcloudGithubIntegration(
   "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
   "Nikshay19",
-  "quiz-node-version",
+  "Calculator",
   "nikshay19",
-  "javascript",
+  "java",
   "master"
 )
   .then((res) => {
@@ -319,3 +323,11 @@ initiateSonarcloudGithubIntegration(
   .catch((err) => {
     console.log(err);
   });
+
+  function timeout() {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve("proceed");
+      }, 1000);
+    });
+  }
