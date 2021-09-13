@@ -194,15 +194,17 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
             )
           : sonarCloudMetricMap.set(el.severity, ++count);
       }
-      const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
-
-      for (const el of sonarCloudMetricsIterator) {
-        sonarCloudMetricsObj[el[0]] = el[1];
-      }
     } else {
       recursive = false;
     }
     ++pageNumber;
+  }
+  const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
+
+  if (sonarCloudMetricMap.size > 0) {
+    for (const el of sonarCloudMetricsIterator) {
+      sonarCloudMetricsObj[el[0]] = el[1];
+    } 
   }
   console.log(sonarCloudMetricsObj);
   return sonarCloudMetricsObj;
@@ -240,9 +242,9 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
         for (const week of el.weeks) {
           deletedLines += week.d;
           addedLines += week.a;
-          totalCommit += week.c;
         }
       }
+      totalCommit = el.total
       if (githubMetricsMap.has(el.author.login)) {
         githubMetricsMap.set(
           `${el.author.login}_deletedLines`,
