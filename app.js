@@ -130,8 +130,14 @@ async function createSonarCloudProjectAndLinkToGitHub(
   }
 
   const { data } = await axios.get(
-    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}`
+    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}`,
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
   );
+  console.log(data);
   const respData = await linkTosonarCloud(
     sonarAuthToken,
     gitHubOrganisation,
@@ -168,7 +174,6 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
   }
 
   while (recursive) {
-
     //timeout for 1s, in case sonar cloud rate limits the request
     console.log(">>> waiting for a second <<<");
     await timeout();
@@ -181,7 +186,7 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
       response_severity_tags.issues.length > 0
     ) {
       for (const el of response_severity_tags.issues) {
-      let count = 0;
+        let count = 0;
         sonarCloudMetricMap.has(el.severity)
           ? sonarCloudMetricMap.set(
               el.severity,
@@ -190,12 +195,11 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
           : sonarCloudMetricMap.set(el.severity, ++count);
       }
       const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
-  
+
       for (const el of sonarCloudMetricsIterator) {
         sonarCloudMetricsObj[el[0]] = el[1];
       }
-    }    
-    else {
+    } else {
       recursive = false;
     }
     ++pageNumber;
@@ -220,7 +224,12 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
   const githubMetricsResponeArray = [];
   let githubMetricsResponeObj = {};
   const githubMetrics = await axios.get(
-    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/stats/contributors`
+    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/stats/contributors`,
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
   );
   if (githubMetrics.data) {
     for (const el of githubMetrics.data) {
@@ -270,7 +279,14 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
   return githubMetricsResponeArray;
 }
 
-async function initiateSonarcloudGithubIntegration(sonarAuthToken,gitHubOrganisation,gitHubRepo,sonarOrganisation,language,branch) {
+async function initiateSonarcloudGithubIntegration(
+  sonarAuthToken,
+  gitHubOrganisation,
+  gitHubRepo,
+  sonarOrganisation,
+  language,
+  branch
+) {
   const obj = {};
   const { data: sonarCloudResponse } =
     await createSonarCloudProjectAndLinkToGitHub(
@@ -294,15 +310,17 @@ async function initiateSonarcloudGithubIntegration(sonarAuthToken,gitHubOrganisa
 
   console.log(">>>>>>> fetching github metrics <<<<<<<<<<");
 
-  const githubMetrics = await getGithubMetrics(
-    gitHubOrganisation,
-    gitHubRepo
-  );
+  const githubMetrics = await getGithubMetrics(gitHubOrganisation, gitHubRepo);
 
   obj.githubMetrics = githubMetrics;
 
   const languagesUsed = await axios.get(
-    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/languages`
+    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/languages`,
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
   );
 
   obj.languagesUsed = languagesUsed.data;
@@ -312,22 +330,22 @@ async function initiateSonarcloudGithubIntegration(sonarAuthToken,gitHubOrganisa
 initiateSonarcloudGithubIntegration(
   "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
   "Nikshay19",
-  "Calculator",
+  "quiz-node-version",
   "nikshay19",
-  "java",
+  "javascript",
   "master"
 )
   .then((res) => {
     console.log(res);
   })
   .catch((err) => {
-    console.log(err);
+    console.log(err.response ? err.response.data : err);
   });
 
-  function timeout() {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        resolve("proceed");
-      }, 1000);
-    });
-  }
+function timeout() {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve("proceed");
+    }, 1000);
+  });
+}
