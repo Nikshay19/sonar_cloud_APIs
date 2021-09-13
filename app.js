@@ -145,10 +145,52 @@ async function createSonarCloudProjectAndLinkToGitHub(
 
 //fetch project metrics once build and analyses is complete
 async function fetchMetricsFromSonarCloud(projectKey, branch) {
-  const metrics = await axios.get(
-    `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=complexity,violations,bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
+  const sonarCloudMetricMap = new Map();
+  const { data: response_severity_tags } = await axios.get(
+    `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500`
   );
-  return metrics;
+  const { data: response_metric_measures } = await axios.get(
+    `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
+  );
+
+  if (
+    response_metric_measures &&
+    response_metric_measures.baseComponent &&
+    typeof response_metric_measures.baseComponent === "object" &&
+    Object.keys(response_metric_measures.baseComponent).length > 0 &&
+    response_metric_measures.baseComponent.measures &&
+    Array.isArray(response_metric_measures.baseComponent.measures) &&
+    response_metric_measures.baseComponent.measures.length > 0
+  ) {
+    for (const el of response_metric_measures.baseComponent.measures) {
+      sonarCloudMetricMap.set(el.metric, el.value ? Number(el.value) : 0);
+    }
+  }
+
+  let sonarCloudMetricsObj = {};
+  if (
+    response_severity_tags.issues &&
+    Array.isArray(response_severity_tags.issues) &&
+    response_severity_tags.issues.length > 0
+  ) {
+    let count = 0;
+    for (const el of response_severity_tags.issues) {
+      sonarCloudMetricMap.has(el.severity)
+        ? sonarCloudMetricMap.set(
+            el.severity,
+            sonarCloudMetricMap.get(el.severity) + 1
+          )
+        : sonarCloudMetricMap.set(el.severity, count++);
+      count = 0;
+    }
+    const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
+
+    for (const el of sonarCloudMetricsIterator) {
+      sonarCloudMetricsObj[el[0]] = el[1];
+    }
+    console.log(sonarCloudMetricsObj);
+  }
+  return sonarCloudMetricsObj;
 }
 
 function encryptTokenForRepoSecret(key, value) {
@@ -178,9 +220,9 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
         for (const week of el.weeks) {
           deletedLines += week.d;
           addedLines += week.a;
+          totalCommit += week.c;
         }
       }
-      totalCommit += el.total;
       if (githubMetricsMap.has(el.author.login)) {
         githubMetricsMap.set(
           `${el.author.login}_deletedLines`,
@@ -217,16 +259,15 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
   return githubMetricsResponeArray;
 }
 
-async function initiateSonarcloudGithubIntegration() {
+async function initiateSonarcloudGithubIntegration(sonarAuthToken,gitHubOrganisation,gitHubRepo,sonarOrganisation,language,branch) {
   const obj = {};
   const { data: sonarCloudResponse } =
     await createSonarCloudProjectAndLinkToGitHub(
-      "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
-      "Nikshay19",
-      "Calculator",
-      "nikshay19",
-      "master",
-      "java"
+      sonarAuthToken,
+      gitHubOrganisation,
+      gitHubRepo,
+      sonarOrganisation,
+      language
     );
   if (
     sonarCloudResponse &&
@@ -235,26 +276,36 @@ async function initiateSonarcloudGithubIntegration() {
   ) {
     const sonarcloudMetrics = await fetchMetricsFromSonarCloud(
       sonarCloudResponse.projects[0].projectKey,
-      "master"
+      branch
     );
-    obj.sonarcloudMetrics = sonarcloudMetrics.data;
+    obj.sonarcloudMetrics = sonarcloudMetrics;
   }
 
   console.log(">>>>>>> fetching github metrics <<<<<<<<<<");
 
-  const githubMetrics = await getGithubMetrics("Nikshay19", "Calculator");
+  const githubMetrics = await getGithubMetrics(
+    gitHubOrganisation,
+    gitHubRepo
+  );
 
   obj.githubMetrics = githubMetrics;
 
   const languagesUsed = await axios.get(
-    "https://api.github.com/repos/Nikshay19/Calculator/languages"
+    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/languages`
   );
 
   obj.languagesUsed = languagesUsed.data;
   return obj;
 }
 
-initiateSonarcloudGithubIntegration()
+initiateSonarcloudGithubIntegration(
+  "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
+  "Nikshay19",
+  "quiz-node-version",
+  "nikshay19",
+  "javascript",
+  "master"
+)
   .then((res) => {
     console.log(res);
   })
