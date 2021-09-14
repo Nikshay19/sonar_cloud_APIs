@@ -281,6 +281,27 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
   return githubMetricsResponeArray;
 }
 
+async function fetchMetricsFromGitHub(
+  gitHubOrganisation,
+  gitHubRepo){
+   const obj = {};
+  const githubMetrics = await getGithubMetrics(gitHubOrganisation, gitHubRepo);
+
+  obj.githubMetrics = githubMetrics;
+
+  const languagesUsed = await axios.get(
+    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/languages`,
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
+  );
+
+  obj.languagesUsed = languagesUsed.data;
+  return obj;
+}
+
 async function initiateSonarcloudGithubIntegration(
   sonarAuthToken,
   gitHubOrganisation,
@@ -312,20 +333,10 @@ async function initiateSonarcloudGithubIntegration(
 
   console.log(">>>>>>> fetching github metrics <<<<<<<<<<");
 
-  const githubMetrics = await getGithubMetrics(gitHubOrganisation, gitHubRepo);
+  const githubMetrics = await fetchMetricsFromGitHub(gitHubOrganisation, gitHubRepo);
 
   obj.githubMetrics = githubMetrics;
 
-  const languagesUsed = await axios.get(
-    `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}/languages`,
-    {
-      headers: {
-        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
-      },
-    }
-  );
-
-  obj.languagesUsed = languagesUsed.data;
   return obj;
 }
 
