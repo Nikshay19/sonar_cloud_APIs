@@ -80,6 +80,11 @@ async function linkTosonarCloud(
 async function pushBuildFile(path, gitHubOrganisation, repo, commitMessage) {
   let content = fs.readFileSync("build.yml", "base64");
 
+  console.log(
+    `path:${path} githubOrg:${gitHubOrganisation} repo name:${repo} commit message: ${commitMessage} fileContent: ${content} token:${process.env.GITHUB_ACCESS_TOKEN}`
+  );
+
+  console.log(`url87 ===> https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`);
   //push the appropriate build file to initiate project analyses by sonarcloud
   const response = await axios.put(
     `https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`,
@@ -150,13 +155,19 @@ async function createSonarCloudProjectAndLinkToGitHub(
 }
 
 //fetch project metrics once build and analyses is complete
-async function fetchMetricsFromSonarCloud(projectKey, branch) {
+async function fetchMetricsFromSonarCloud(projectKey, branch, sonarAuthToken) {
   const sonarCloudMetricMap = new Map();
   let sonarCloudMetricsObj = {};
   let recursive = true;
   let pageNumber = 1;
   const { data: response_metric_measures } = await axios.get(
-    `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`
+    `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`,
+    {
+      auth: {
+        username: sonarAuthToken,
+        password: "", // Password is not needed
+      },
+    }
   );
 
   if (
@@ -178,7 +189,13 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
     console.log(">>> waiting for a second <<<");
     await timeout();
     const { data: response_severity_tags } = await axios.get(
-      `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500&types=CODE_SMELL,BUG,VULNERABILITY&p=${pageNumber}`
+      `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500&types=CODE_SMELL,BUG,VULNERABILITY&p=${pageNumber}`,
+      {
+        auth: {
+          username: sonarAuthToken,
+          password: "", // Password is not needed
+        },
+      }
     );
     if (
       response_severity_tags.issues &&
@@ -204,7 +221,7 @@ async function fetchMetricsFromSonarCloud(projectKey, branch) {
   if (sonarCloudMetricMap.size > 0) {
     for (const el of sonarCloudMetricsIterator) {
       sonarCloudMetricsObj[el[0]] = el[1];
-    } 
+    }
   }
   console.log(sonarCloudMetricsObj);
   return sonarCloudMetricsObj;
@@ -244,7 +261,7 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
           addedLines += week.a;
         }
       }
-      totalCommit = el.total
+      totalCommit = el.total;
       if (githubMetricsMap.has(el.author.login)) {
         githubMetricsMap.set(
           `${el.author.login}_deletedLines`,
@@ -305,7 +322,8 @@ async function initiateSonarcloudGithubIntegration(
   ) {
     const sonarcloudMetrics = await fetchMetricsFromSonarCloud(
       sonarCloudResponse.projects[0].projectKey,
-      branch
+      branch,
+      sonarAuthToken
     );
     obj.sonarcloudMetrics = sonarcloudMetrics;
   }
@@ -330,17 +348,18 @@ async function initiateSonarcloudGithubIntegration(
 }
 
 initiateSonarcloudGithubIntegration(
-  "f11d0b115fbdb7796f15a31aebe616f81654cb5e",
-  "Nikshay19",
-  "quiz-node-version",
-  "nikshay19",
-  "javascript",
-  "master"
+  "30d4dcd001e2869ad849ffbece87016f0906cdf5",
+  "neojarvis",
+  "sample_test_repo",
+  "neojarvis",
+  "java",
+  "main"
 )
   .then((res) => {
     console.log(res);
   })
   .catch((err) => {
+    console.log(err.response);
     console.log(err.response ? err.response.data : err);
   });
 
@@ -351,3 +370,4 @@ function timeout() {
     }, 1000);
   });
 }
+

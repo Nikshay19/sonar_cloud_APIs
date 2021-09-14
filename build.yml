@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -20,5 +20,5 @@ jobs:
       - name: Build and analyze
         env:
           GITHUB_TOKEN: 1234rthjrthtr556  # This is some junk value  - this is needed so  dont ignore it
-          SONAR_TOKEN: f11d0b115fbdb7796f15a31aebe616f81654cb5e #Add it to keys.json and get it from there
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Nikshay19_Calculator -Dsonar.login=f11d0b115fbdb7796f15a31aebe616f81654cb5e
+          SONAR_TOKEN: 30d4dcd001e2869ad849ffbece87016f0906cdf5 #Add it to keys.json and get it from there
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=neojarvis_sample_test_repo -Dsonar.login=30d4dcd001e2869ad849ffbece87016f0906cdf5
