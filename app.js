@@ -68,7 +68,10 @@ async function linkTosonarCloud(
     data: `installationKeys=${gitHubOrganisation}%2F${repoName}%7C${repoId}&organization=${sonarOrganisation}`,
   });
 
+  console.log(projectCreateReponse.data);
+
   //trigger autoscan to get metrics
+  //commenting for now - do not delete this, might be a need in future
   const triggerAutoScan = await axios.get(
     `https://sonarcloud.io/api/autoscan/eligibility?autoEnable=true&projectKey=${projectCreateReponse.data.projects[0].projectKey}`
   );
@@ -77,15 +80,50 @@ async function linkTosonarCloud(
   return projectCreateReponse;
 }
 
-async function pushBuildFile(path, gitHubOrganisation, repo, commitMessage) {
-  let content = fs.readFileSync("build.yml", "base64");
+async function pushBuildFile(
+  path,
+  gitHubOrganisation,
+  repo,
+  commitMessage,
+  language
+) {
+  let content = fs.readFileSync(`${language}build.yml`, "base64");
 
   console.log(
     `path:${path} githubOrg:${gitHubOrganisation} repo name:${repo} commit message: ${commitMessage} fileContent: ${content} token:${process.env.GITHUB_ACCESS_TOKEN}`
   );
 
-  console.log(`url87 ===> https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`);
+  console.log(
+    `url87 ===> https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`
+  );
   //push the appropriate build file to initiate project analyses by sonarcloud
+  const response = await axios.put(
+    `https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`,
+    {
+      owner: gitHubOrganisation,
+      repo: repo,
+      message: commitMessage,
+      content: content,
+    },
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
+  );
+  return response;
+}
+
+async function pushSonarPropertyFile(
+  path,
+  gitHubOrganisation,
+  repo,
+  commitMessage,
+  language
+) {
+  let content = fs.readFileSync("sonar-project.properties", "base64");
+
+  //push the appropriate sonar property file file to initiate project analyses by sonarcloud
   const response = await axios.put(
     `https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`,
     {
@@ -125,12 +163,20 @@ async function createSonarCloudProjectAndLinkToGitHub(
     gitHubRepo
   );
 
-  if (language !== "javascript") {
-    await pushBuildFile(
-      ".github/workflows/build.yml",
+  await pushBuildFile(
+    ".github/workflows/build.yml",
+    gitHubOrganisation,
+    gitHubRepo,
+    "build",
+    language
+  );
+  if (language === "javascript") {
+    await pushSonarPropertyFile(
+      "sonar-project.properties",
       gitHubOrganisation,
       gitHubRepo,
-      "build"
+      "property file",
+      language
     );
   }
 
@@ -142,7 +188,20 @@ async function createSonarCloudProjectAndLinkToGitHub(
       },
     }
   );
-  console.log(data);
+
+  // const { data: actions } = await axios.put(
+  //   `https://api.github.com/orgs/${gitHubOrganisation}/actions/permissions/repositories/${data.id}`,
+  //   {
+  //     org: gitHubOrganisation,
+  //     repository_id: data.id,
+  //   },
+  //   {
+  //     headers: {
+  //       Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+  //     },
+  //   }
+  // );
+  // console.log(actions);
   const respData = await linkTosonarCloud(
     sonarAuthToken,
     gitHubOrganisation,
@@ -298,10 +357,8 @@ async function getGithubMetrics(gitHubOrganisation, gitHubRepo) {
   return githubMetricsResponeArray;
 }
 
-async function fetchMetricsFromGitHub(
-  gitHubOrganisation,
-  gitHubRepo){
-   const obj = {};
+async function fetchMetricsFromGitHub(gitHubOrganisation, gitHubRepo) {
+  const obj = {};
   const githubMetrics = await getGithubMetrics(gitHubOrganisation, gitHubRepo);
 
   obj.githubMetrics = githubMetrics;
@@ -351,7 +408,10 @@ async function initiateSonarcloudGithubIntegration(
 
   console.log(">>>>>>> fetching github metrics <<<<<<<<<<");
 
-  const githubMetrics = await fetchMetricsFromGitHub(gitHubOrganisation, gitHubRepo);
+  const githubMetrics = await fetchMetricsFromGitHub(
+    gitHubOrganisation,
+    gitHubRepo
+  );
 
   obj.githubMetrics = githubMetrics;
 
@@ -359,10 +419,10 @@ async function initiateSonarcloudGithubIntegration(
 }
 
 initiateSonarcloudGithubIntegration(
-  "30d4dcd001e2869ad849ffbece87016f0906cdf5",
-  "neojarvis",
-  "sample_test_repo",
-  "neojarvis",
+  "5f823c56a6fb3dad72af67881b48e2997ba46b33",
+  "neojarvis-testing",
+  "b733dda5-4189-4a0a-9310-98cb0433b39d",
+  "neojarvis-testing",
   "java",
   "main"
 )
@@ -381,4 +441,3 @@ function timeout() {
     }, 1000);
   });
 }
-

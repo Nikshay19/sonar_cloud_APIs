@@ -20,5 +20,5 @@ jobs:
       - name: Build and analyze
         env:
           GITHUB_TOKEN: 1234rthjrthtr556  # This is some junk value  - this is needed so  dont ignore it
-          SONAR_TOKEN: 30d4dcd001e2869ad849ffbece87016f0906cdf5 #Add it to keys.json and get it from there
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=neojarvis_sample_test_repo -Dsonar.login=30d4dcd001e2869ad849ffbece87016f0906cdf5
+          SONAR_TOKEN: 5f823c56a6fb3dad72af67881b48e2997ba46b33 #Add it to keys.json and get it from there
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=neojarvis-testing_b733dda5-4189-4a0a-9310-98cb0433b39d -Dsonar.login=5f823c56a6fb3dad72af67881b48e2997ba46b33
