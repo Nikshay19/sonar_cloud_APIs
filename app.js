@@ -121,7 +121,11 @@ async function pushSonarPropertyFile(
   commitMessage,
   language
 ) {
-  let content = fs.readFileSync("sonar-project.properties", "base64");
+  let project_key = "neojarvis-testing_9036cfc0-b7f4-40f8-a9ba-f9b2785d03e5";
+  let organization = "neojarvis-testing";
+
+  let property = `sonar.projectKey=${project_key}\n sonar.organization=${organization}`;
+  let content = Buffer.from(property).toString('base64');
 
   //push the appropriate sonar property file file to initiate project analyses by sonarcloud
   const response = await axios.put(
@@ -141,6 +145,32 @@ async function pushSonarPropertyFile(
   return response;
 }
 
+async function pushPomXMLFile(
+  path,
+  gitHubOrganisation,
+  repo,
+  commitMessage,
+  language
+) {
+  let content = fs.readFileSync("pom.xml", "base64");
+
+  //push the appropriate sonar property file file to initiate project analyses by sonarcloud
+  const response = await axios.put(
+    `https://api.github.com/repos/${gitHubOrganisation}/${repo}/contents/${path}`,
+    {
+      owner: gitHubOrganisation,
+      repo: repo,
+      message: commitMessage,
+      content: content,
+    },
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
+  );
+  return response;
+}
 async function createSonarCloudProjectAndLinkToGitHub(
   sonarAuthToken,
   gitHubOrganisation,
@@ -180,6 +210,15 @@ async function createSonarCloudProjectAndLinkToGitHub(
     );
   }
 
+  if (language === "java") {
+    await pushPomXMLFile(
+      "pom.xml",
+      gitHubOrganisation,
+      gitHubRepo,
+      "xml file",
+      language
+    );
+  }
   const { data } = await axios.get(
     `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}`,
     {
@@ -421,9 +460,9 @@ async function initiateSonarcloudGithubIntegration(
 initiateSonarcloudGithubIntegration(
   "5f823c56a6fb3dad72af67881b48e2997ba46b33",
   "neojarvis-testing",
-  "b733dda5-4189-4a0a-9310-98cb0433b39d",
+  "9036cfc0-b7f4-40f8-a9ba-f9b2785d03e5",
   "neojarvis-testing",
-  "java",
+  "javascript",
   "main"
 )
   .then((res) => {
