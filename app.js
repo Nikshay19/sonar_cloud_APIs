@@ -259,29 +259,29 @@ async function fetchMetricsFromSonarCloud(projectKey, branch, sonarAuthToken) {
   let sonarMetricObj = {};
   let recursive = true;
   let pageNumber = 1;
-  const { data: response_metric_measures } = await axios.get(
-    `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`,
-    {
-      auth: {
-        username: sonarAuthToken,
-        password: "", // Password is not needed
-      },
-    }
-  );
+  // const { data: response_metric_measures } = await axios.get(
+  //   `https://sonarcloud.io/api/measures/component_tree?component=${projectKey}&branch=${branch}&metricKeys=bugs,code_smells,lines,vulnerabilities&additionalFields=metrics`,
+  //   {
+  //     auth: {
+  //       username: sonarAuthToken,
+  //       password: "", // Password is not needed
+  //     },
+  //   }
+  // );
 
-  if (
-    response_metric_measures &&
-    response_metric_measures.baseComponent &&
-    typeof response_metric_measures.baseComponent === "object" &&
-    Object.keys(response_metric_measures.baseComponent).length > 0 &&
-    response_metric_measures.baseComponent.measures &&
-    Array.isArray(response_metric_measures.baseComponent.measures) &&
-    response_metric_measures.baseComponent.measures.length > 0
-  ) {
-    for (const el of response_metric_measures.baseComponent.measures) {
-      sonarCloudMetricMap.set(el.metric, el.value ? Number(el.value) : 0);
-    }
-  }
+  // if (
+  //   response_metric_measures &&
+  //   response_metric_measures.baseComponent &&
+  //   typeof response_metric_measures.baseComponent === "object" &&
+  //   Object.keys(response_metric_measures.baseComponent).length > 0 &&
+  //   response_metric_measures.baseComponent.measures &&
+  //   Array.isArray(response_metric_measures.baseComponent.measures) &&
+  //   response_metric_measures.baseComponent.measures.length > 0
+  // ) {
+  //   for (const el of response_metric_measures.baseComponent.measures) {
+  //     sonarCloudMetricMap.set(el.metric, el.value ? Number(el.value) : 0);
+  //   }
+  // }
 
   while (recursive) {
     //timeout for 1s, in case sonar cloud rate limits the request
