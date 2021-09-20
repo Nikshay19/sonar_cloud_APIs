@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -17,4 +17,4 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: 1234rthjrthtr556  # Needed to get PR information, if any
-          SONAR_TOKEN: 5f823c56a6fb3dad72af67881b48e2997ba46b33
+          SONAR_TOKEN: ef2cd05f804d0b09e18c6b5f11ead8f9ab7b8ca4

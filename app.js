@@ -121,11 +121,11 @@ async function pushSonarPropertyFile(
   commitMessage,
   language
 ) {
-  let project_key = "neojarvis-testing_9036cfc0-b7f4-40f8-a9ba-f9b2785d03e5";
-  let organization = "neojarvis-testing";
+  let project_key = "Nikshay19_quiz-node-version";
+  let organization = "nikshay19";
 
   let property = `sonar.projectKey=${project_key}\n sonar.organization=${organization}`;
-  let content = Buffer.from(property).toString('base64');
+  let content = Buffer.from(property).toString("base64");
 
   //push the appropriate sonar property file file to initiate project analyses by sonarcloud
   const response = await axios.put(
@@ -210,15 +210,15 @@ async function createSonarCloudProjectAndLinkToGitHub(
     );
   }
 
-  if (language === "java") {
-    await pushPomXMLFile(
-      "pom.xml",
-      gitHubOrganisation,
-      gitHubRepo,
-      "xml file",
-      language
-    );
-  }
+  // if (language === "java") {
+  //   await pushPomXMLFile(
+  //     "pom.xml",
+  //     gitHubOrganisation,
+  //     gitHubRepo,
+  //     "xml file",
+  //     language
+  //   );
+  // }
   const { data } = await axios.get(
     `https://api.github.com/repos/${gitHubOrganisation}/${gitHubRepo}`,
     {
@@ -255,7 +255,8 @@ async function createSonarCloudProjectAndLinkToGitHub(
 //fetch project metrics once build and analyses is complete
 async function fetchMetricsFromSonarCloud(projectKey, branch, sonarAuthToken) {
   const sonarCloudMetricMap = new Map();
-  let sonarCloudMetricsObj = {};
+  const sonarMetricsArray = [];
+  let sonarMetricObj = {};
   let recursive = true;
   let pageNumber = 1;
   const { data: response_metric_measures } = await axios.get(
@@ -285,29 +286,51 @@ async function fetchMetricsFromSonarCloud(projectKey, branch, sonarAuthToken) {
   while (recursive) {
     //timeout for 1s, in case sonar cloud rate limits the request
     console.log(">>> waiting for a second <<<");
-    await timeout();
+    // await timeout();
     const { data: response_severity_tags } = await axios.get(
       `https://sonarcloud.io/api/issues/search?additionalFields=_all,comments,languages,actionPlans,rules,transitions,actions,users&asc=true&branch=${branch}&componentKeys=${projectKey}&ps=500&types=CODE_SMELL,BUG,VULNERABILITY&p=${pageNumber}`,
       {
         auth: {
-          username: sonarAuthToken,
+          username: "ef2cd05f804d0b09e18c6b5f11ead8f9ab7b8ca4",
           password: "", // Password is not needed
         },
       }
     );
+    console.log(response_severity_tags);
     if (
       response_severity_tags.issues &&
       Array.isArray(response_severity_tags.issues) &&
       response_severity_tags.issues.length > 0
     ) {
       for (const el of response_severity_tags.issues) {
-        let count = 0;
-        sonarCloudMetricMap.has(el.severity)
-          ? sonarCloudMetricMap.set(
-              el.severity,
-              sonarCloudMetricMap.get(el.severity) + 1
-            )
-          : sonarCloudMetricMap.set(el.severity, ++count);
+        let severityCount = 0;
+        let metricCount = 0;
+
+        if (sonarCloudMetricMap.has(el.author)) {
+          sonarCloudMetricMap.has(`${el.author} ${el.severity}`)
+            ? sonarCloudMetricMap.set(
+                `${el.author} ${el.severity}`,
+                sonarCloudMetricMap.get(`${el.author} ${el.severity}`) + 1
+              )
+            : sonarCloudMetricMap.set(
+                `${el.author} ${el.severity}`,
+                ++severityCount
+              );
+
+          sonarCloudMetricMap.has(`${el.author} ${el.type}`)
+            ? sonarCloudMetricMap.set(
+                `${el.author} ${el.type}`,
+                sonarCloudMetricMap.get(`${el.author} ${el.type}`) + 1
+              )
+            : sonarCloudMetricMap.set(`${el.author} ${el.type}`, ++metricCount);
+        } else {
+          sonarCloudMetricMap.set(el.author, "author");
+          sonarCloudMetricMap.set(
+            `${el.author} ${el.severity}`,
+            ++severityCount
+          );
+          sonarCloudMetricMap.set(`${el.author} ${el.type}`, ++metricCount);
+        }
       }
     } else {
       recursive = false;
@@ -315,14 +338,28 @@ async function fetchMetricsFromSonarCloud(projectKey, branch, sonarAuthToken) {
     ++pageNumber;
   }
   const sonarCloudMetricsIterator = sonarCloudMetricMap[Symbol.iterator]();
+  console.log(sonarCloudMetricMap);
 
   if (sonarCloudMetricMap.size > 0) {
     for (const el of sonarCloudMetricsIterator) {
-      sonarCloudMetricsObj[el[0]] = el[1];
+      if (el[1] === "author") {
+        if (Object.keys(sonarMetricObj).length > 0) {
+          sonarMetricsArray.push(sonarMetricObj);
+          sonarMetricObj = {};
+        }
+      }
+      sonarMetricObj[el[1] === "author" ? "author" : el[0].split(" ")[1]] =
+        el[1] === "author" ? el[0] : el[1];
     }
   }
-  console.log(sonarCloudMetricsObj);
-  return sonarCloudMetricsObj;
+  sonarMetricsArray.length !== 0 && Object.keys(sonarMetricObj).length > 0
+    ? sonarMetricsArray.push(sonarMetricObj)
+    : null;
+  return sonarMetricsArray.length
+    ? sonarMetricsArray
+    : Object.keys(sonarMetricObj).length > 0
+    ? sonarMetricObj
+    : null;
 }
 
 function encryptTokenForRepoSecret(key, value) {
@@ -458,12 +495,12 @@ async function initiateSonarcloudGithubIntegration(
 }
 
 initiateSonarcloudGithubIntegration(
-  "5f823c56a6fb3dad72af67881b48e2997ba46b33",
-  "neojarvis-testing",
-  "9036cfc0-b7f4-40f8-a9ba-f9b2785d03e5",
-  "neojarvis-testing",
-  "javascript",
-  "main"
+  "ef2cd05f804d0b09e18c6b5f11ead8f9ab7b8ca4",
+  "Nikshay19",
+  "Calculator",
+  "nikshay19",
+  "java",
+  "master"
 )
   .then((res) => {
     console.log(res);
